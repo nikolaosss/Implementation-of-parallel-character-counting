@@ -57,6 +57,8 @@ void signal_handler4(int signum){
     printf("The character was found: %d times\n", atoi(print));
     fflush(stdout);
 
+    if(percentage == 100.0){exit(0);}
+
 }
 
 void frontend_init(pid_t dispatcher_pid, int fed[]){

@@ -11,7 +11,7 @@
 #include <sys/select.h>  
 #include <sys/time.h>
 
-int type = 0, no_change = 0, counter = 0,flag = 0,after_process_call = 0, ricta = 0;
+int type = 0, no_change = 0, counter = 0,flag = 0,after_process_call = 0, ricta = 0, number = 0;
 double percentage_read = 0.0;
 off_t  current_offset = 0, offset = 0, offset_step, temp_offset = 0;
 
@@ -35,8 +35,16 @@ void signal_handler3(int signum){
     flag = 1;
     after_process_call = 1;
 }
+void sigchld_handler(int signum) {
+    type = -1;
+    flag = 1;
+    counter = 0;
+    no_change = 1;
+    after_process_call = 1;  
+    number = 1;  
+}
 
-void calculate(int fd, off_t original_size, int **pipefd, int overall_workers, int cc){
+void calculate(int fd, off_t original_size, int **pipefd, int overall_workers, int cc, long int remainder){
 
     char message[1024];
 
@@ -92,8 +100,8 @@ void calculate(int fd, off_t original_size, int **pipefd, int overall_workers, i
 
         ricta += atoi(message);
         percentage_read = ((double)offset / (double)original_size) * 100.0;
-
         printf("ricta%d\n",ricta);
+
         printf("Percentage of file read: %.2f%%\n", percentage_read);
         printf("Offset value: %" PRIiMAX "\n", (intmax_t)offset);
 
@@ -103,12 +111,12 @@ void calculate(int fd, off_t original_size, int **pipefd, int overall_workers, i
 }
 
 int dispatcher_init(pid_t f, int fed []){
-    
+
     char buffer[1024];
-    int temp = 0, number = 0, overall_workers = 0, cc = 0, result = 0;
+    int temp = 0, overall_workers = 0, cc = 0, result = 0;
     pid_t *p;
 
-    long int remainder = 0;
+    int remainder = 0;
 
     p = (pid_t *)malloc(20 * sizeof(pid_t));
 
@@ -136,11 +144,12 @@ int dispatcher_init(pid_t f, int fed []){
     signal(SIGUSR1, signal_handler1);
     signal(SIGUSR2, signal_handler2);
     signal(SIGINT, signal_handler3);
+    signal(SIGCHLD, sigchld_handler);
 
     while(1){
         
         if(after_process_call == 0){
-
+       
             number = 0;
 
             int bytes_read = read(fed[0], buffer, sizeof(buffer));
@@ -156,6 +165,7 @@ int dispatcher_init(pid_t f, int fed []){
                     else{break;}
                 }
                 if(number == 0){continue;}
+                if((type == -1) && (overall_workers - number)<0){printf("--You can not have negative workers, right now you have %d workers, try a different input--\n", overall_workers);fflush(stdout);continue;}
             }
         }
         
@@ -215,7 +225,7 @@ int dispatcher_init(pid_t f, int fed []){
                     break;
                 }
 
-                calculate(fd, original_size, pipefd, overall_workers, cc);
+                calculate(fd, original_size, pipefd, overall_workers, cc, remainder);
 
                 if(percentage_read == 100.0){
                     after_process_call = 1;
@@ -234,8 +244,8 @@ int dispatcher_init(pid_t f, int fed []){
             file_size = original_size - offset;
             offset_step = (file_size) / (overall_workers*5);
 
-            remainder = file_size % (overall_workers);
-
+            remainder = file_size % (overall_workers*5);
+     
             if(overall_workers*5 > file_size) {
                 offset_step = 1;
                 remainder = 0;
@@ -273,7 +283,7 @@ int dispatcher_init(pid_t f, int fed []){
             if(percentage_read == 100.0){
                 free(p);
                 free(pipefd);
-                return 1;
+                exit(0);
             }
         }
     }

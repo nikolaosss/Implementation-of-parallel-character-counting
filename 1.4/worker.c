@@ -29,7 +29,6 @@ void worker_init(int fd, int readpipe, int writepipe) {
 
         char buffer[1024];
         offset_diff = (off_t)strtoll(input, NULL, 10);
-        printf("Offset diff: %" PRIiMAX "\n", (intmax_t)offset_diff);
 
         memset(buffer, 0, sizeof(buffer));
         bytesRead1 = read(fd, buffer, offset_diff);
