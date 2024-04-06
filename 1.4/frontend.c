@@ -10,7 +10,6 @@
 
 int pipefd[2];
 
-
 int valid_input(char buff[], int *numDigits){
 
     int w = 0;
@@ -39,7 +38,6 @@ int valid_input(char buff[], int *numDigits){
     else{
         return 0;
     }
-    
 }
 
 void signal_handler4(int signum){
