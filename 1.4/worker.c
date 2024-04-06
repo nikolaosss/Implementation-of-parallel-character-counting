@@ -12,7 +12,10 @@
 #include <sys/select.h>  
 #include <sys/time.h>
 
-void worker_init(int fd, int readpipe, int writepipe) {
+void worker_init(int fd, int readpipe, int writepipe, int x[]) {
+
+    close(x[0]);
+    close(writepipe);
 
     ssize_t bytesRead1, bytesRead2;
     char input[1024];
@@ -23,7 +26,7 @@ void worker_init(int fd, int readpipe, int writepipe) {
         memset(input, 0, sizeof(input));
         bytesRead2 = read(readpipe, input, sizeof(input) - 1);
 
-        if ((atoi(input) < 1) || (bytesRead2 == -1)) {
+        if ((atoi(input) < 1) || (bytesRead2 < 0)) {
             continue;
         }
 
@@ -32,9 +35,6 @@ void worker_init(int fd, int readpipe, int writepipe) {
 
         memset(buffer, 0, sizeof(buffer));
         bytesRead1 = read(fd, buffer, offset_diff);
-
-        printf("i am reading: %s -- ", buffer);
-        fflush(stdout);
 
         if (bytesRead1 == -1) {
             perror("read");
@@ -49,12 +49,9 @@ void worker_init(int fd, int readpipe, int writepipe) {
             }
         }
 
-        char message[1024];
-        snprintf(message, sizeof(message), "%d", counter);
+        //printf("%d",counter);
+        //fflush(stdout);
+        write(x[1], &counter, sizeof(int));
 
-        write(writepipe, message, strlen(message) + 1);
-
-        usleep(100);
-        
     }
 }
