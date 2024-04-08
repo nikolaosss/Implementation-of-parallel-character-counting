@@ -47,35 +47,33 @@ void sigchld_handler(int signum) {
 void calculate(int fd, off_t original_size, int **pipefd, int overall_workers, int cc){
 
     char message[1024];
+    static off_t temp_remainder = 0;
  
-    if((cc == 1) && (offset == temp_offset + offset_step*5*overall_workers)){
+    if((cc == 1) && (offset == temp_offset + offset_step*5*overall_workers + temp_remainder)){
 
         while(percentage_read<100.0){
+
+            sleep(2);
 
             if(flag == 1){
                 break;
             }
-            sleep(2);
+
             lseek(fd, offset, SEEK_SET);
             offset++;
+            temp_remainder++;
             off_t r = 1;
             
             snprintf(message, sizeof(message), "%" PRIiMAX, (intmax_t)r);
 
             write(pipefd[counter%overall_workers][1], message, strlen(message) + 1);
-            count++;
-            usleep(5);
 
-            //memset(message, 0, sizeof(message));
-            //int bytesRead2 = read(pipefd[counter%overall_workers][0], message, sizeof(message));
-
-            //ricta += atoi(message);
             percentage_read = ((double)offset / (double)original_size) * 100.0;
-            
-            //printf("Percentage of file read: %.2f%%\n", percentage_read);
-            //printf("Offset value: %" PRIiMAX "\n", (intmax_t)offset); 
 
+            count++;
             counter++;
+
+            printf("-- -- \n");
         }
 
     }
@@ -86,20 +84,12 @@ void calculate(int fd, off_t original_size, int **pipefd, int overall_workers, i
         offset += offset_step;
 
         snprintf(message, sizeof(message), "%" PRIiMAX, (intmax_t)offset_step);
-        count++;
+        
         write(pipefd[counter%overall_workers][1], message, strlen(message) + 1);
 
-        usleep(5);
-
-        //memset(message, 0, sizeof(message));
-        //int bytesRead2 = read(pipefd[counter%overall_workers][0], message, sizeof(message));
-
-        //ricta += atoi(message);
         percentage_read = ((double)offset / (double)original_size) * 100.0;
-
-        //printf("Percentage of file read: %.2f%%\n", percentage_read);
-        //printf("Offset value: %" PRIiMAX "\n", (intmax_t)offset); 
-
+        
+        count++;
         counter++;
     }   
 }
